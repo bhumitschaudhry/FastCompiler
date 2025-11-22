@@ -1,0 +1,781 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FastCompiler</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: #1e1e1e;
+            color: #d4d4d4;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .titlebar {
+            background: #323233;
+            padding: 12px 20px;
+            text-align: center;
+            font-size: 14px;
+            border-bottom: 1px solid #454545;
+        }
+
+        .container {
+            display: grid;
+            grid-template-columns: 250px 1fr;
+            grid-template-rows: 1fr 1fr;
+            height: calc(100vh - 50px);
+            gap: 1px;
+            background: #454545;
+        }
+
+        .sidebar {
+            background: #252526;
+            padding: 20px 10px;
+            grid-row: 1 / 3;
+            overflow-y: auto;
+        }
+
+        .sidebar h3 {
+            font-size: 13px;
+            color: #cccccc;
+            margin-bottom: 15px;
+            padding: 0 10px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .sidebar-section {
+            margin-bottom: 25px;
+        }
+
+        .file-tree {
+            list-style: none;
+        }
+
+        .file-item {
+            padding: 6px 10px;
+            cursor: pointer;
+            font-size: 13px;
+            border-radius: 3px;
+            transition: background 0.2s;
+        }
+
+        .file-item:hover {
+            background: #2a2d2e;
+        }
+
+        .file-item.active {
+            background: #37373d;
+        }
+
+        .file-item::before {
+            content: '📄 ';
+            margin-right: 5px;
+        }
+
+        .example-item {
+            padding: 8px 10px;
+            cursor: pointer;
+            font-size: 13px;
+            border-radius: 3px;
+            transition: background 0.2s;
+            margin-bottom: 5px;
+            background: #2d2d30;
+        }
+
+        .example-item:hover {
+            background: #3e3e42;
+        }
+
+        .code-panel {
+            background: #1e1e1e;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .panel-header {
+            background: #2d2d30;
+            padding: 12px 20px;
+            font-size: 24px;
+            font-weight: 300;
+            text-align: center;
+            border-bottom: 1px solid #454545;
+        }
+
+        .code-editor {
+            flex: 1;
+            padding: 20px;
+            overflow: auto;
+        }
+
+        textarea {
+            width: 100%;
+            height: 100%;
+            background: #1e1e1e;
+            color: #d4d4d4;
+            border: none;
+            outline: none;
+            font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+            font-size: 14px;
+            line-height: 1.6;
+            resize: none;
+            padding: 10px;
+        }
+
+        .terminal-panel {
+            background: #1e1e1e;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .terminal-content {
+            flex: 1;
+            padding: 20px;
+            overflow-y: auto;
+            font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+            font-size: 13px;
+            line-height: 1.5;
+        }
+
+        .terminal-line {
+            margin-bottom: 5px;
+        }
+
+        .terminal-line.error {
+            color: #f48771;
+        }
+
+        .terminal-line.success {
+            color: #4ec9b0;
+        }
+
+        .terminal-line.info {
+            color: #569cd6;
+        }
+
+        .toolbar {
+            padding: 10px 20px;
+            background: #2d2d30;
+            border-bottom: 1px solid #454545;
+            display: flex;
+            gap: 10px;
+        }
+
+        button {
+            background: #0e639c;
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            cursor: pointer;
+            font-size: 13px;
+            border-radius: 3px;
+            transition: background 0.2s;
+        }
+
+        button:hover {
+            background: #1177bb;
+        }
+
+        button:active {
+            background: #0d5a8f;
+        }
+
+        button.secondary {
+            background: #3c3c3c;
+        }
+
+        button.secondary:hover {
+            background: #505050;
+        }
+
+        .output-section {
+            margin-top: 15px;
+            padding: 15px;
+            background: #252526;
+            border-left: 3px solid #4ec9b0;
+            border-radius: 3px;
+        }
+
+        .output-label {
+            color: #4ec9b0;
+            font-weight: bold;
+            margin-bottom: 8px;
+        }
+
+        .output-value {
+            color: #ce9178;
+        }
+
+        ::-webkit-scrollbar {
+            width: 10px;
+            height: 10px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: #1e1e1e;
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: #424242;
+            border-radius: 5px;
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background: #4e4e4e;
+        }
+    </style>
+</head>
+<body>
+    <div class="titlebar">FastCompiler</div>
+    <div class="container">
+        <div class="sidebar">
+            <div class="sidebar-section">
+                <h3>Examples</h3>
+                <div class="example-item" data-example="basic">Basic Variables</div>
+                <div class="example-item" data-example="loop">For Loop</div>
+                <div class="example-item" data-example="if">If Statement</div>
+                <div class="example-item" data-example="complex">Complex Example</div>
+            </div>
+        </div>
+        <div class="code-panel">
+            <div class="panel-header">Code</div>
+            <div class="toolbar">
+                <button id="runBtn">Run</button>
+                <button id="compileBtn" class="secondary">Compile</button>
+                <button id="clearBtn" class="secondary">Clear</button>
+            </div>
+            <div class="code-editor">
+                <textarea id="codeInput" spellcheck="false">let x = 0
+for i in 0..4 {
+    let x = x + i
+}
+print(x)</textarea>
+            </div>
+        </div>
+        <div class="terminal-panel">
+            <div class="panel-header">Terminal</div>
+            <div class="terminal-content" id="terminal">
+                <div class="terminal-line info">FastCompiler v1.0</div>
+                <div class="terminal-line">Ready to compile and run programs...</div>
+            </div>
+        </div>
+    </div>
+    <script>
+        const examples = {
+            basic: `let x = 5
+                    let y = 10
+                    let z = x + y
+                    print(z)`,
+            loop: `let x = 0
+                    for i in 0..4 {
+                        let x = x + i
+                    }
+                    print(x)`,
+            if: `let x = 10
+                let y = 5
+                if x {
+                    print(x + y)
+                } else {
+                    print(x - y)
+                }`,
+            complex: `let sum = 0
+                    let count = 0
+                    for i in 0..5 {
+                        let sum = sum + i
+                        let count = count + 1
+                    }
+                    print(sum)
+                    print(count)`
+        };
+        class Token {
+            constructor(type, value) {
+                this.type = type;
+                this.value = value;
+            }
+        }
+        function tokenize(code) {
+            const TOKEN_SPEC = [
+                ['NUMBER', /^\d+/],
+                ['LET', /^let\b/],
+                ['PRINT', /^print\b/],
+                ['FOR', /^for\b/],
+                ['IN', /^in\b/],
+                ['IF', /^if\b/],
+                ['ELSE', /^else\b/],
+                ['RANGE', /^\.\./],
+                ['IDENT', /^[A-Za-z_][A-Za-z0-9_]*/],
+                ['LPAREN', /^\(/],
+                ['RPAREN', /^\)/],
+                ['LBRACE', /^\{/],
+                ['RBRACE', /^\}/],
+                ['EQ', /^=/],
+                ['OP', /^[\+\-\*\/]/],
+                ['NEWLINE', /^\n/],
+                ['SKIP', /^[ \t]+/],
+            ];
+            const tokens = [];
+            let pos = 0;
+            while (pos < code.length) {
+                let matched = false;
+                for (const [type, regex] of TOKEN_SPEC) {
+                    const remaining = code.slice(pos);
+                    const match = remaining.match(regex);
+                    if (match) {
+                        const value = match[0];
+                        if (type === 'NUMBER') {
+                            tokens.push(new Token('NUMBER', parseInt(value)));
+                        } else if (['LET', 'PRINT', 'FOR', 'IN', 'IF', 'ELSE'].includes(type)) {
+                            tokens.push(new Token(type, value));
+                        } else if (type === 'IDENT') {
+                            tokens.push(new Token('IDENT', value));
+                        } else if (type === 'RANGE') {
+                            tokens.push(new Token('RANGE', value));
+                        } else if (['LPAREN', 'RPAREN', 'LBRACE', 'RBRACE', 'EQ', 'OP'].includes(type)) {
+                            tokens.push(new Token(type, value));
+                        } else if (type === 'NEWLINE') {
+                            tokens.push(new Token('NEWLINE', value));
+                        } else if (type !== 'SKIP') {
+                            throw new Error(`Unexpected character: ${value}`);
+                        }
+                        pos += value.length;
+                        matched = true;
+                        break;
+                    }
+                }
+                if (!matched) {
+                    throw new Error(`Unexpected character at position ${pos}: ${code[pos]}`);
+                }
+            }
+            return tokens;
+        }
+        class ASTNode {}
+        class Program extends ASTNode {
+            constructor(statements) {
+                super();
+                this.statements = statements;
+            }
+        }
+        class Let extends ASTNode {
+            constructor(name, expr) {
+                super();
+                this.name = name;
+                this.expr = expr;
+            }
+        }
+        class Print extends ASTNode {
+            constructor(expr) {
+                super();
+                this.expr = expr;
+            }
+        }
+        class BinOp extends ASTNode {
+            constructor(op, left, right) {
+                super();
+                this.op = op;
+                this.left = left;
+                this.right = right;
+            }
+        }
+        class Number extends ASTNode {
+            constructor(value) {
+                super();
+                this.value = value;
+            }
+        }
+        class Var extends ASTNode {
+            constructor(name) {
+                super();
+                this.name = name;
+            }
+        }
+        class ForLoop extends ASTNode {
+            constructor(varName, startExpr, endExpr, body) {
+                super();
+                this.var = varName;
+                this.start_expr = startExpr;
+                this.end_expr = endExpr;
+                this.body = body;
+            }
+        }
+        class If extends ASTNode {
+            constructor(cond, thenBlock, elseBlock = null) {
+                super();
+                this.cond = cond;
+                this.then_block = thenBlock;
+                this.else_block = elseBlock;
+            }
+        }
+        class Parser {
+            constructor(tokens) {
+                this.tokens = tokens.filter(t => t.type !== 'NEWLINE');
+                this.pos = 0;
+            }
+            peek() {
+                return this.pos < this.tokens.length ? this.tokens[this.pos] : new Token('EOF', '');
+            }
+            next() {
+                const t = this.peek();
+                this.pos++;
+                return t;
+            }
+            expect(type) {
+                const t = this.next();
+                if (t.type !== type) {
+                    throw new Error(`Expected ${type}, got ${t.type}`);
+                }
+                return t;
+            }
+            parse() {
+                const stmts = [];
+                while (this.peek().type !== 'EOF') {
+                    stmts.push(this.parseStatement());
+                }
+                return new Program(stmts);
+            }
+            parseStatement() {
+                const t = this.peek();
+                if (t.type === 'LET') {
+                    this.next();
+                    const name = this.expect('IDENT').value;
+                    this.expect('EQ');
+                    const expr = this.parseExpr();
+                    return new Let(name, expr);
+                } else if (t.type === 'PRINT') {
+                    this.next();
+                    this.expect('LPAREN');
+                    const expr = this.parseExpr();
+                    this.expect('RPAREN');
+                    return new Print(expr);
+                } else if (t.type === 'FOR') {
+                    this.next();
+                    const varName = this.expect('IDENT').value;
+                    this.expect('IN');
+                    const start = this.parseExpr();
+                    this.expect('RANGE');
+                    const end = this.parseExpr();
+                    this.expect('LBRACE');
+                    const body = [];
+                    while (this.peek().type !== 'RBRACE') {
+                        body.push(this.parseStatement());
+                    }
+                    this.expect('RBRACE');
+                    return new ForLoop(varName, start, end, body);
+                } else if (t.type === 'IF') {
+                    this.next();
+                    const cond = this.parseExpr();
+                    this.expect('LBRACE');
+                    const thenBlock = [];
+                    while (this.peek().type !== 'RBRACE') {
+                        thenBlock.push(this.parseStatement());
+                    }
+                    this.expect('RBRACE');
+                    let elseBlock = null;
+                    if (this.peek().type === 'ELSE') {
+                        this.next();
+                        this.expect('LBRACE');
+                        elseBlock = [];
+                        while (this.peek().type !== 'RBRACE') {
+                            elseBlock.push(this.parseStatement());
+                        }
+                        this.expect('RBRACE');
+                    }
+                    return new If(cond, thenBlock, elseBlock);
+                } else {
+                    return this.parseExpr();
+                }
+            }
+            parseExpr() {
+                let node = this.parseTerm();
+                while (this.peek().type === 'OP' && ['+', '-'].includes(this.peek().value)) {
+                    const op = this.next().value;
+                    const right = this.parseTerm();
+                    node = new BinOp(op, node, right);
+                }
+                return node;
+            }
+            parseTerm() {
+                let node = this.parseFactor();
+                while (this.peek().type === 'OP' && ['*', '/'].includes(this.peek().value)) {
+                    const op = this.next().value;
+                    const right = this.parseFactor();
+                    node = new BinOp(op, node, right);
+                }
+                return node;
+            }
+            parseFactor() {
+                const t = this.peek();
+                if (t.type === 'NUMBER') {
+                    this.next();
+                    return new Number(t.value);
+                } else if (t.type === 'IDENT') {
+                    this.next();
+                    return new Var(t.value);
+                } else if (t.type === 'LPAREN') {
+                    this.next();
+                    const node = this.parseExpr();
+                    this.expect('RPAREN');
+                    return node;
+                } else {
+                    throw new Error(`Unexpected token in expression: ${t.type}`);
+                }
+            }
+        }
+        class VM {
+            constructor(bytecode) {
+                this.bc = bytecode;
+                this.stack = [];
+                this.vars = {};
+                this.pc = 0;
+                this.output = [];
+                this.constVal = 0;
+            }
+            step() {
+                if (this.pc >= this.bc.length) return false;
+                const inst = this.bc[this.pc];
+                const op = inst[0];
+                switch (op) {
+                    case 'CONST':
+                        this.constVal = inst[1];
+                        break;
+                    case 'PUSH_CONST':
+                        this.stack.push(this.constVal);
+                        break;
+                    case 'LOAD':
+                        this.stack.push(this.vars[inst[1]] || 0);
+                        break;
+                    case 'STORE':
+                        this.vars[inst[1]] = this.stack.pop();
+                        break;
+                    case 'ADD':
+                        const b1 = this.stack.pop();
+                        const a1 = this.stack.pop();
+                        this.stack.push(a1 + b1);
+                        break;
+                    case 'SUB':
+                        const b2 = this.stack.pop();
+                        const a2 = this.stack.pop();
+                        this.stack.push(a2 - b2);
+                        break;
+                    case 'MUL':
+                        const b3 = this.stack.pop();
+                        const a3 = this.stack.pop();
+                        this.stack.push(a3 * b3);
+                        break;
+                    case 'DIV':
+                        const b4 = this.stack.pop();
+                        const a4 = this.stack.pop();
+                        this.stack.push(b4 !== 0 ? Math.floor(a4 / b4) : 0);
+                        break;
+                    case 'PRINT':
+                        this.output.push(String(this.stack.pop()));
+                        break;
+                    case 'JMP':
+                        this.pc = inst[1];
+                        return true;
+                    case 'JMP_IF_ZERO':
+                        const v1 = this.stack.pop();
+                        if (v1 === 0) {
+                            this.pc = inst[1];
+                            return true;
+                        }
+                        break;
+                    case 'JMP_IF_POS':
+                        const v2 = this.stack.pop();
+                        if (v2 > 0) {
+                            this.pc = inst[1];
+                            return true;
+                        }
+                        break;
+                    default:
+                        throw new Error(`Unknown op: ${op}`);
+                }
+                this.pc++;
+                return true;
+            }
+            run(maxSteps = 100000) {
+                let steps = 0;
+                while (this.step()) {
+                    steps++;
+                    if (steps > maxSteps) {
+                        throw new Error('Max steps exceeded');
+                    }
+                }
+                return this.output;
+            }
+        }
+        function astToIR(ast) {
+            const ir = [];
+            let labelCounter = 0;
+            function emit(node) {
+                if (node instanceof Program) {
+                    node.statements.forEach(s => emit(s));
+                } else if (node instanceof Let) {
+                    emit(node.expr);
+                    ir.push(['STORE', node.name]);
+                } else if (node instanceof Print) {
+                    emit(node.expr);
+                    ir.push(['PRINT']);
+                } else if (node instanceof Number) {
+                    ir.push(['CONST', node.value]);
+                    ir.push(['PUSH_CONST']);
+                } else if (node instanceof Var) {
+                    ir.push(['LOAD', node.name]);
+                } else if (node instanceof BinOp) {
+                    emit(node.left);
+                    emit(node.right);
+                    switch (node.op) {
+                        case '+': ir.push(['ADD']); break;
+                        case '-': ir.push(['SUB']); break;
+                        case '*': ir.push(['MUL']); break;
+                        case '/': ir.push(['DIV']); break;
+                    }
+                } else if (node instanceof ForLoop) {
+                    const startLbl = `LBL${labelCounter++}_S`;
+                    const endLbl = `LBL${labelCounter++}_E`;
+                    emit(node.start_expr);
+                    ir.push(['STORE', node.var]);
+                    ir.push(['LABEL', startLbl]);
+                    ir.push(['LOAD', node.var]);
+                    emit(node.end_expr);
+                    ir.push(['SUB']);
+                    ir.push(['JMP_IF_POS', endLbl]);
+                    node.body.forEach(s => emit(s));
+                    ir.push(['LOAD', node.var]);
+                    ir.push(['CONST', 1]);
+                    ir.push(['PUSH_CONST']);
+                    ir.push(['ADD']);
+                    ir.push(['STORE', node.var]);
+                    ir.push(['JMP', startLbl]);
+                    ir.push(['LABEL', endLbl]);
+                } else if (node instanceof If) {
+                    const lblElse = `LBL${labelCounter++}_EL`;
+                    const lblEnd = `LBL${labelCounter++}_EN`;
+                    emit(node.cond);
+                    ir.push(['PUSH_CONST']);
+                    ir.push(['JMP_IF_ZERO', lblElse]);
+                    node.then_block.forEach(s => emit(s));
+                    ir.push(['JMP', lblEnd]);
+                    ir.push(['LABEL', lblElse]);
+                    if (node.else_block) {
+                        node.else_block.forEach(s => emit(s));
+                    }  
+                    ir.push(['LABEL', lblEnd]);
+                }
+            }
+            emit(ast);
+            return ir;
+        }
+        function assembleIR(ir) {
+            const labels = {};
+            let pc = 0;
+            for (const inst of ir) {
+                if (inst[0] === 'LABEL') {
+                    labels[inst[1]] = pc;
+                } else {
+                    pc++;
+                }
+            }
+            const bytecode = [];
+            for (const inst of ir) {
+                if (inst[0] === 'LABEL') continue;
+                const op = inst[0];
+                if (['JMP', 'JMP_IF_ZERO', 'JMP_IF_POS'].includes(op)) {
+                    const target = inst[1];
+                    if (!(target in labels)) {
+                        throw new Error(`Unknown label: ${target}`);
+                    }
+                    bytecode.push([op, labels[target]]);
+                } else {
+                    bytecode.push(inst);
+                }
+            }
+            return bytecode;
+        }
+        const terminal = document.getElementById('terminal');
+        function clearTerminal() {
+            terminal.innerHTML = '<div class="terminal-line info">FastCompiler v1.0</div><div class="terminal-line">Ready to compile and run programs...</div>';
+        }
+        function addTerminalLine(text, type = '') {
+            const line = document.createElement('div');
+            line.className = 'terminal-line ' + type;
+            line.textContent = text;
+            terminal.appendChild(line);
+            terminal.scrollTop = terminal.scrollHeight;
+        }
+        function addOutputSection(label, content) {
+            const section = document.createElement('div');
+            section.className = 'output-section';
+            section.innerHTML = `<div class="output-label">${label}</div><div class="output-value">${content}</div>`;
+            terminal.appendChild(section);
+            terminal.scrollTop = terminal.scrollHeight;
+        }
+        document.getElementById('runBtn').addEventListener('click', () => {
+            const code = document.getElementById('codeInput').value;
+            clearTerminal();
+            addTerminalLine('Running program...', 'info');
+            try {
+                const tokens = tokenize(code);
+                addTerminalLine('Tokenization successful', 'success');
+                const parser = new Parser(tokens);
+                const ast = parser.parse();
+                addTerminalLine('Parsing successful', 'success');
+                const ir = astToIR(ast);
+                addTerminalLine('IR generation successful', 'success');
+                const bytecode = assembleIR(ir);
+                addTerminalLine('Assembly successful', 'success');
+                addTerminalLine(`Generated ${bytecode.length} bytecode instructions`, 'info');
+                const vm = new VM(bytecode);
+                const output = vm.run();
+                addTerminalLine('Execution completed', 'success');
+                if (output.length > 0) {
+                    addOutputSection('Program Output:', output.join('\n'));
+                } else {
+                    addTerminalLine('(No output)', 'info');
+                } 
+            } catch (error) {
+                addTerminalLine('Error: ' + error.message, 'error');
+            }
+        });
+        document.getElementById('compileBtn').addEventListener('click', () => {
+            const code = document.getElementById('codeInput').value;
+            clearTerminal();
+            addTerminalLine('Compiling program...', 'info');
+            try {
+                const tokens = tokenize(code);
+                addOutputSection('Tokens:', tokens.map(t => `${t.type}(${t.value})`).join(', '));
+                const parser = new Parser(tokens);
+                const ast = parser.parse();
+                addOutputSection('AST:', JSON.stringify(ast, null, 2));
+                const ir = astToIR(ast);
+                addOutputSection('IR:', ir.map(i => i.join(' ')).join('\n'));
+                const bytecode = assembleIR(ir);
+                addOutputSection('Bytecode:', bytecode.map((i, idx) => `${idx}: ${i.join(' ')}`).join('\n'));
+                addTerminalLine('Compilation successful', 'success');
+            } catch (error) {
+                addTerminalLine('Error: ' + error.message, 'error');
+            }
+        });
+        document.getElementById('clearBtn').addEventListener('click', () => {
+            document.getElementById('codeInput').value = '';
+            clearTerminal();
+        });
+        document.querySelectorAll('.example-item').forEach(item => {
+            item.addEventListener('click', () => {
+                const exampleKey = item.getAttribute('data-example');
+                document.getElementById('codeInput').value = examples[exampleKey];
+                clearTerminal();
+                addTerminalLine(`Loaded example: ${item.textContent}`, 'info');
+            });
+        });
+    </script>
+</body>
+</html>
