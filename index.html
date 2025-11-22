@@ -3,16 +3,21 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Lato:wght@700&display=swap" rel="stylesheet">
     <title>FastCompiler</title>
     <style>
         * {
             margin: 0;
             padding: 0;
             box-sizing: border-box;
+            font-family: "Lato", sans-serif;
+            font-weight: 700;
+            font-style: normal;
         }
 
         body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
             background: #1e1e1e;
             color: #d4d4d4;
             height: 100vh;
@@ -272,29 +277,29 @@ print(x)</textarea>
     <script>
         const examples = {
             basic: `let x = 5
-                    let y = 10
-                    let z = x + y
-                    print(z)`,
+let y = 10
+let z = x + y
+print(z)`,
             loop: `let x = 0
-                    for i in 0..4 {
-                        let x = x + i
-                    }
-                    print(x)`,
+for i in 0..4 {
+    let x = x + i
+}
+print(x)`,
             if: `let x = 10
-                let y = 5
-                if x {
-                    print(x + y)
-                } else {
-                    print(x - y)
-                }`,
+let y = 5
+if x {
+    print(x + y)
+} else {
+    print(x - y)
+}`,
             complex: `let sum = 0
-                    let count = 0
-                    for i in 0..5 {
-                        let sum = sum + i
-                        let count = count + 1
-                    }
-                    print(sum)
-                    print(count)`
+let count = 0
+for i in 0..5 {
+    let sum = sum + i
+    let count = count + 1
+}
+print(sum)
+print(count)`
         };
         class Token {
             constructor(type, value) {
